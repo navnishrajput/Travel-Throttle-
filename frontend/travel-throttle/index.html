@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Travel Throttle</title>
+    <!-- Global polyfill for sockjs and WebSocket -->
+    <script>
+      if (typeof global === 'undefined') {
+        window.global = window;
+      }
+      if (typeof process === 'undefined') {
+        window.process = { env: {} };
+      }
+      
+      // Suppress disconnected port errors - they don't affect functionality
+      const originalError = console.error;
+      console.error = function(...args) {
+        const errorMsg = args.join(' ');
+        if (errorMsg.includes('disconnected port') || 
+            errorMsg.includes('Attempting to use a disconnected port') ||
+            errorMsg.includes('Extension context invalidated')) {
+          // Silently ignore these errors
+          return;
+        }
+        originalError.apply(console, args);
+      };
+      
+      // Also handle unhandled errors
+      window.addEventListener('error', function(e) {
+        if (e.message && (
+          e.message.includes('disconnected port') || 
+          e.message.includes('Attempting to use a disconnected port')
+        )) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      });
+      
+      // Handle unhandled promise rejections
+      window.addEventListener('unhandledrejection', function(e) {
+        if (e.reason && e.reason.message && (
+          e.reason.message.includes('disconnected port') ||
+          e.reason.message.includes('Attempting to use a disconnected port')
+        )) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
