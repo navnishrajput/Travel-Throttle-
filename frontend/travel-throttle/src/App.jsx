@@ -6,7 +6,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Layout, AuthLayout } from './components/layouts';
-import { OAuth2Redirect } from './pages/OAuth2Redirect';
+import Landing from './pages/Landing';
 import { 
   Login, 
   Signup, 
@@ -33,10 +33,10 @@ const ProtectedRoute = ({ children }) => {
     );
   }
   
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  return isAuthenticated ? children : <Navigate to="/" replace />;
 };
 
-// Public Route Wrapper
+// Public Route Wrapper (redirects to dashboard if already logged in)
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   
@@ -54,24 +54,24 @@ const PublicRoute = ({ children }) => {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      {/* Landing Page - Public */}
+      <Route path="/" element={
+        <PublicRoute>
+          <Landing />
+        </PublicRoute>
+      } />
       
-      {/* OAuth2 Redirect Route */}
-      <Route path="/oauth2/redirect" element={<OAuth2Redirect />} />
-      
-      {/* Public Routes */}
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={
-          <PublicRoute>
-            <Login />
-          </PublicRoute>
-        } />
-        <Route path="/signup" element={
-          <PublicRoute>
-            <Signup />
-          </PublicRoute>
-        } />
-      </Route>
+      {/* Auth Routes */}
+      <Route path="/login" element={
+        <PublicRoute>
+          <Login />
+        </PublicRoute>
+      } />
+      <Route path="/signup" element={
+        <PublicRoute>
+          <Signup />
+        </PublicRoute>
+      } />
       
       {/* Protected Routes */}
       <Route element={<Layout />}>
@@ -122,7 +122,7 @@ function AppRoutes() {
         } />
       </Route>
       
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

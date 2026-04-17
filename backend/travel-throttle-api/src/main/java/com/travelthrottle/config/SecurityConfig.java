@@ -100,6 +100,7 @@ public class SecurityConfig {
                                 "/ws/**",
                                 "/ws",
                                 "/public/**",
+                                "/public/**",
                                 "/db-check/**",
                                 "/oauth2/**"
                         ).permitAll()

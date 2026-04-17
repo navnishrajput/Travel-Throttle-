@@ -2,6 +2,7 @@
  * PAGES BARREL EXPORT
  */
 
+export { default as Landing } from './Landing';
 export { default as Login } from './Login';
 export { default as Signup } from './Signup';
 export { default as Dashboard } from './Dashboard';
@@ -13,4 +14,3 @@ export { default as MyRides } from './MyRides';
 export { default as Messages } from './Messages';
 export { default as Garage } from './Garage';
 export { default as Notifications } from './Notifications';
-export { default as OAuth2Redirect } from './OAuth2Redirect';

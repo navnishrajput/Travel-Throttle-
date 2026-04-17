@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none">
+  <defs>
+    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5e9;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#22c55e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Motorcycle Icon -->
+  <g transform="translate(5, 5)">
+    <circle cx="25" cy="40" r="18" fill="url(#logoGrad)"/>
+    
+    <g transform="translate(7, 22)">
+      <!-- Rear Wheel -->
+      <circle cx="14" cy="28" r="10" fill="none" stroke="white" stroke-width="2.5"/>
+      <circle cx="14" cy="28" r="3" fill="white"/>
+      
+      <!-- Front Wheel -->
+      <circle cx="42" cy="28" r="10" fill="none" stroke="white" stroke-width="2.5"/>
+      <circle cx="42" cy="28" r="3" fill="white"/>
+      
+      <!-- Frame -->
+      <path d="M10 18 L22 8 L38 8 L46 18" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      
+      <!-- Engine -->
+      <rect x="22" y="12" width="14" height="9" rx="2" fill="white"/>
+      
+      <!-- Seat -->
+      <path d="M14 12 L24 8 L35 10" stroke="white" stroke-width="3" fill="none" stroke-linecap="round"/>
+      
+      <!-- Handlebars -->
+      <line x1="42" y1="6" x2="38" y2="14" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="38" y1="6" x2="46" y2="6" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      
+      <!-- Exhaust -->
+      <path d="M10 24 L4 28 L4 32" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </g>
+  </g>
+  
+  <!-- Text -->
+  <text x="60" y="38" font-family="Inter, system-ui, sans-serif" font-size="28" font-weight="800">
+    <tspan fill="url(#logoGrad)">Travel</tspan>
+    <tspan fill="white">Throttle</tspan>
+  </text>
+</svg>
