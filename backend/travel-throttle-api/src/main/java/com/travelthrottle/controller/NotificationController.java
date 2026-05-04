@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -30,7 +29,6 @@ public class NotificationController {
 
     private static final Logger logger = LoggerFactory.getLogger(NotificationController.class);
     private final NotificationRepository notificationRepository;
-    private final SimpMessagingTemplate messagingTemplate;
 
     private String getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -54,21 +52,25 @@ public class NotificationController {
             else timeAgo = (seconds / 86400) + "d ago";
         }
 
-        return NotificationResponse.builder()
-                .id(notification.getId())
-                .type(notification.getType())
-                .title(notification.getTitle())
-                .message(notification.getMessage())
-                .isRead(notification.getIsRead())
-                .referenceId(notification.getReferenceId())
-                .createdAt(notification.getCreatedAt())
-                .readAt(notification.getReadAt())
-                .timeAgo(timeAgo)
-                .icon(notification.getType() != null ? notification.getType().getIcon() : "bell")
-                .userId(notification.getUser() != null ? notification.getUser().getId() : null)
-                .userName(notification.getUser() != null ? notification.getUser().getName() : null)
-                .userAvatar(notification.getUser() != null ? notification.getUser().getAvatar() : null)
-                .build();
+        NotificationResponse response = new NotificationResponse();
+        response.setId(notification.getId());
+        response.setType(notification.getType());
+        response.setTitle(notification.getTitle());
+        response.setMessage(notification.getMessage());
+        response.setIsRead(notification.getIsRead());
+        response.setReferenceId(notification.getReferenceId());
+        response.setCreatedAt(notification.getCreatedAt());
+        response.setReadAt(notification.getReadAt());
+        response.setTimeAgo(timeAgo);
+        response.setIcon(notification.getType() != null ? notification.getType().getIcon() : "bell");
+
+        if (notification.getUser() != null) {
+            response.setUserId(notification.getUser().getId());
+            response.setUserName(notification.getUser().getName());
+            response.setUserAvatar(notification.getUser().getAvatar());
+        }
+
+        return response;
     }
 
     @GetMapping
@@ -159,21 +161,6 @@ public class NotificationController {
         } catch (Exception e) {
             logger.error("Error deleting: {}", e.getMessage(), e);
             return ResponseEntity.ok(ApiResponse.success("Deleted", null));
-        }
-    }
-
-    // Method to send real-time notification
-    public void sendNotification(String userId, Notification notification) {
-        try {
-            Notification savedNotification = notificationRepository.save(notification);
-            messagingTemplate.convertAndSendToUser(
-                    userId,
-                    "/queue/notifications",
-                    mapToResponse(savedNotification)
-            );
-            logger.info("Real-time notification sent to user {}", userId);
-        } catch (Exception e) {
-            logger.error("Failed to send real-time notification: {}", e.getMessage());
         }
     }
 }

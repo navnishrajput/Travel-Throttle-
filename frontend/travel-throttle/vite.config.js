@@ -1,11 +1,23 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   define: {
     global: 'globalThis',
+  },
+  css: {
+    devSourcemap: true,
+    preprocessorOptions: {
+      css: {
+        additionalData: `@import "./src/index.css";`,
+      },
+    },
+    modules: {
+      localsConvention: 'camelCase',
+      scopeBehaviour: 'local',
+      generateScopedName: '[name]__[local]___[hash:base64:5]',
+    },
   },
   server: {
     port: 5173,
@@ -28,15 +40,9 @@ export default defineConfig({
         secure: false,
         timeout: 30000,
         proxyTimeout: 30000,
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
             console.log('Proxy error:', err.message);
-          });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('Sending Request:', req.method, req.url);
-          });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('Received Response:', proxyRes.statusCode, req.url);
           });
         },
       },
@@ -51,8 +57,27 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    cssCodeSplit: true,
+    cssMinify: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['axios', 'date-fns', 'clsx'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', 'axios'],
+    include: [
+      'react', 
+      'react-dom', 
+      'react-router-dom', 
+      'axios',
+      'date-fns',
+      'clsx',
+      'tailwind-merge',
+    ],
   },
 })

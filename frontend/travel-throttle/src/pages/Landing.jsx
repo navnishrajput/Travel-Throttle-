@@ -1,9 +1,6 @@
 /**
  * LANDING PAGE
- * Modern, responsive home page - All issues fixed
- * - Hero image fixed
- * - Ride stories images fixed
- * - Search and filter working perfectly
+ * Modern home page for unauthenticated users
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -24,7 +21,7 @@ import {
 } from 'react-icons/fi';
 import { 
   FaMotorcycle, FaUserFriends, FaRoute, FaHandHoldingHeart, 
-  FaQuoteLeft
+  FaQuoteLeft, FaUsers
 } from 'react-icons/fa';
 
 // Ride Stories with reliable working images
@@ -130,57 +127,39 @@ export const Landing = () => {
   };
 
   const handleSearch = async () => {
-    console.log('=== SEARCH START ===');
-    console.log('Search query:', searchQuery);
-    console.log('Filters:', filters);
-    
     setLoading(true);
     setHasSearched(true);
     setSearchError('');
     
     try {
       const searchFilters = {};
-      
-      // Add search query to both source and destination for better results
       if (searchQuery.trim()) {
         searchFilters.source = searchQuery.trim();
         searchFilters.destination = searchQuery.trim();
       }
-      
-      // Add specific filters if provided
       if (filters.source.trim()) searchFilters.source = filters.source.trim();
       if (filters.destination.trim()) searchFilters.destination = filters.destination.trim();
       if (filters.date) searchFilters.date = filters.date;
       if (filters.maxPrice) searchFilters.maxPrice = parseFloat(filters.maxPrice);
       if (filters.minSeats) searchFilters.minSeats = parseInt(filters.minSeats);
       
-      console.log('Final search filters:', searchFilters);
-      
       let response;
       if (Object.keys(searchFilters).length === 0) {
-        console.log('No filters, getting all upcoming rides...');
         response = await publicRideService.getAllUpcomingRides();
       } else {
-        console.log('Searching with filters...');
         response = await publicRideService.searchRides(searchFilters);
       }
       
-      console.log('Search response:', response);
-      
       if (response.success) {
         const rides = response.data || [];
-        console.log('Found rides:', rides.length);
         setSearchResults(rides);
-        
         if (rides.length === 0) {
           setSearchError('No rides found. Try adjusting your search terms.');
         }
-        
         setTimeout(() => {
           resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
       } else {
-        console.error('Search failed:', response.error);
         setSearchError(response.error || 'Search failed. Please try again.');
         setSearchResults([]);
       }
@@ -250,7 +229,6 @@ export const Landing = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-dark-card/80 backdrop-blur-2xl border-b border-white/5 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
-            {/* Logo */}
             <Link to="/" className="flex items-center gap-3 group">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-primary via-secondary to-accent rounded-full blur-xl opacity-70 group-hover:opacity-100 transition-all duration-500"></div>
@@ -267,7 +245,6 @@ export const Landing = () => {
               </div>
             </Link>
 
-            {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-3">
               <button onClick={scrollToSearch} className="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors">
                 Find Rides
@@ -282,7 +259,6 @@ export const Landing = () => {
               </Link>
             </div>
 
-            {/* Mobile Menu Button */}
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
@@ -291,7 +267,6 @@ export const Landing = () => {
             </button>
           </div>
 
-          {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="md:hidden py-4 border-t border-white/5 animate-slide-down">
               <div className="flex flex-col gap-2">
@@ -312,7 +287,6 @@ export const Landing = () => {
 
       {/* Hero Section */}
       <section className="relative pt-24 md:pt-28 lg:pt-32 pb-16 md:pb-20 lg:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Animated Background */}
         <div className="absolute inset-0">
           <div className="absolute top-0 -left-40 w-80 h-80 bg-primary/20 rounded-full blur-3xl animate-pulse-slow"></div>
           <div className="absolute top-20 -right-40 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
@@ -321,7 +295,6 @@ export const Landing = () => {
         
         <div className="relative max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 xl:gap-16 items-center">
-            {/* Left Content */}
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full mb-6">
                 <FiAward className="w-4 h-4 text-primary" />
@@ -357,7 +330,6 @@ export const Landing = () => {
                 </Link>
               </div>
               
-              {/* Trust Indicators */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 mt-8 text-sm text-gray-400">
                 <span className="flex items-center gap-2"><FiShield className="text-primary w-4 h-4" /> Verified Riders</span>
                 <span className="flex items-center gap-2"><FiStar className="text-yellow-500 w-4 h-4 fill-current" /> 4.8+ Rating</span>
@@ -365,10 +337,8 @@ export const Landing = () => {
               </div>
             </div>
             
-            {/* Right Content - Hero Image - FIXED */}
             <div className="relative mt-8 lg:mt-0">
-              {/* Card 1 - Behind Image - Top Right */}
-              <div className="absolute -top-4 -right-4 sm:-top-6 sm:-right-6 z-20">
+              <div className="absolute -top-4 -right-4 sm:-top-6 sm:-right-6 z-0">
                 <div className="bg-dark-card/90 backdrop-blur-xl p-3 sm:p-4 rounded-xl shadow-2xl border border-white/10">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-accent to-emerald-500 rounded-full flex items-center justify-center shadow-lg">
@@ -382,7 +352,6 @@ export const Landing = () => {
                 </div>
               </div>
 
-              {/* Main Image */}
               <div className="relative z-10 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
                 <img 
                   src="https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop"
@@ -393,7 +362,6 @@ export const Landing = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-dark-bg/80 via-transparent to-transparent pointer-events-none"></div>
               </div>
 
-              {/* Card 2 - Above Image - Bottom Left */}
               <div className="absolute -bottom-4 -left-4 sm:-bottom-6 sm:-left-6 z-20">
                 <div className="bg-dark-card/90 backdrop-blur-xl p-3 sm:p-4 rounded-xl shadow-2xl border border-white/10">
                   <div className="flex items-center gap-3">
@@ -495,8 +463,33 @@ export const Landing = () => {
         </section>
       )}
 
-      {/* Search Section - WORKING PERFECTLY */}
-      <section ref={searchRef} className="py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-white/5">
+      {/* Group Rides Section - NEW */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 border border-accent/20 rounded-full mb-4">
+              <FaUsers className="w-4 h-4 text-accent" />
+              <span className="text-sm text-accent font-medium">Group Rides</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
+              Ride Together in <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">Groups</span>
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base mb-8">
+              Join multi-bike group rides and experience the joy of riding together with fellow bikers. 
+              Lead a group or join an existing one!
+            </p>
+            <Link to="/signup">
+              <Button variant="primary" size="lg" className="bg-gradient-to-r from-primary to-secondary">
+                Sign Up to Join Group Rides
+                <FiArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Search Section */}
+      <section ref={searchRef} className="py-16 md:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8 md:mb-12">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
@@ -561,7 +554,6 @@ export const Landing = () => {
             )}
           </Card>
 
-          {/* Search Results */}
           <div ref={resultsRef}>
             {hasSearched && (
               <div className="mt-8">
@@ -605,7 +597,7 @@ export const Landing = () => {
                                     <Avatar src={ride.owner.avatar} name={ride.owner.name} size="xs" />
                                     <span className="text-xs text-gray-500">by {ride.owner.name}</span>
                                   </div>
-                                  <Button size="sm" variant="104-primary" onClick={() => handleJoinRequest(ride.id)} className="bg-gradient-to-r from-primary to-secondary">Join</Button>
+                                  <Button size="sm" variant="primary" onClick={() => handleJoinRequest(ride.id)} className="bg-gradient-to-r from-primary to-secondary">Join</Button>
                                 </div>
                               )}
                             </div>
@@ -660,7 +652,7 @@ export const Landing = () => {
         </div>
       </section>
 
-      {/* Ride Stories - FIXED IMAGES */}
+      {/* Ride Stories */}
       <section className="py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
@@ -706,9 +698,7 @@ export const Landing = () => {
                     src={MOCK_STORIES[currentStoryIndex].image} 
                     alt="Ride story" 
                     className="rounded-xl w-full h-56 sm:h-64 lg:h-72 object-cover shadow-xl"
-                    onError={(e) => { 
-                      e.target.src = 'https://images.pexels.com/photos/39693/motorcycle-racer-racing-speed-39693.jpeg?auto=compress&cs=tinysrgb&w=600'; 
-                    }}
+                    onError={(e) => { e.target.src = 'https://images.pexels.com/photos/39693/motorcycle-racer-racing-speed-39693.jpeg?auto=compress&cs=tinysrgb&w=600'; }}
                   />
                   <div className="absolute -bottom-4 -right-4 bg-dark-card p-3 sm:p-4 rounded-xl shadow-xl border border-white/10">
                     <p className="text-xl sm:text-2xl font-bold text-accent">{MOCK_STORIES[currentStoryIndex].ride.distance}</p>

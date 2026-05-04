@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
-import java.time.Duration;
 
 @Entity
 @Table(name = "notifications")
@@ -44,16 +43,7 @@ public class Notification {
 
     private LocalDateTime readAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-
-    public String getTimeAgo() {
-        if (createdAt == null) return "";
-        long seconds = Duration.between(createdAt, LocalDateTime.now()).getSeconds();
-        if (seconds < 60) return "just now";
-        if (seconds < 3600) return (seconds / 60) + "m ago";
-        if (seconds < 86400) return (seconds / 3600) + "h ago";
-        return (seconds / 86400) + "d ago";
-    }
 }

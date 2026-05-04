@@ -10,12 +10,12 @@ import { rideService } from '../../services/rideService';
 import { requestService } from '../../services/requestService';
 import { cn, formatDate, formatCurrency } from '../../utils/helpers';
 import { RIDE_STATUS } from '../../constants';
-import { Card, Badge, Button, Avatar, Modal, Input } from '../common';
+import { Card, Badge, Button, Avatar, Modal, Input } from '../common';  // ← FIXED PATH
 import { 
   FiMapPin, FiCalendar, FiClock, FiUsers, FiDollarSign,
   FiNavigation, FiEdit2, FiTrash2, FiXCircle, FiSend, 
   FiCheck, FiX, FiUserPlus, FiEye, FiRefreshCw,
-  FiLoader, FiAlertTriangle, FiCheckCircle
+  FiLoader, FiAlertTriangle
 } from 'react-icons/fi';
 
 export const RideCard = ({ 
@@ -74,11 +74,6 @@ export const RideCard = ({
   };
 
   const handleJoinRequest = async () => {
-    if (!showRequestModal) {
-      setShowRequestModal(true);
-      return;
-    }
-
     setLoading(true);
     try {
       const response = await requestService.sendRequest(id, requestMessage, seatsRequested);
@@ -118,48 +113,23 @@ export const RideCard = ({
   };
 
   const handleDeleteRide = async () => {
-    console.log('=== DELETE RIDE START ===');
-    console.log('Ride ID:', id);
-    
     setDeleteLoading(true);
-    
     try {
-      console.log('Calling rideService.deleteRide...');
       const response = await rideService.deleteRide(id);
-      console.log('Delete response:', response);
-      
       if (response.success) {
-        console.log('Ride deleted successfully!');
         alert('Ride deleted successfully!');
         setShowDeleteConfirm(false);
-        
-        // Call onRefresh to reload the parent list
-        if (onRefresh) {
-          console.log('Calling onRefresh...');
-          onRefresh();
-        }
-        
-        // If on ride details page, navigate away
+        if (onRefresh) onRefresh();
         if (window.location.pathname.includes(`/rides/${id}`)) {
           window.location.href = '/my-rides';
         }
       } else {
-        console.error('Delete failed:', response.error);
-        alert(response.error || 'Failed to delete ride. Please try again.');
+        alert(response.error || 'Failed to delete ride');
       }
     } catch (error) {
-      console.error('Delete error:', error);
-      console.error('Error details:', error.response?.data || error.message);
-      
-      // Show more detailed error message
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error || 
-                          error.message || 
-                          'Failed to delete ride. Please try again.';
-      alert('Delete failed: ' + errorMessage);
+      alert('Failed to delete ride. Please try again.');
     } finally {
       setDeleteLoading(false);
-      console.log('=== DELETE RIDE END ===');
     }
   };
 
@@ -184,20 +154,14 @@ export const RideCard = ({
   const handleViewRequests = async () => {
     setLoadingRequests(true);
     try {
-      console.log('Fetching requests for ride:', id);
       const response = await requestService.getRequestsByRide(id);
-      console.log('Requests response:', response);
-      
       if (response.success) {
-        const requests = response.data || [];
-        console.log('Found requests:', requests.length);
-        setIncomingRequests(requests);
+        setIncomingRequests(response.data || []);
         setShowRequestsModal(true);
       } else {
         alert(response.error || 'Failed to fetch requests');
       }
     } catch (error) {
-      console.error('Error fetching requests:', error);
       alert('Failed to fetch requests. Please try again.');
     } finally {
       setLoadingRequests(false);
@@ -308,7 +272,7 @@ export const RideCard = ({
         {showActions && status === 'UPCOMING' && (
           <div className="mt-3 flex gap-2 flex-wrap">
             <Button size="sm" variant="ghost" leftIcon={<FiEye />} onClick={handleCardClick}>
-              View
+              View Details
             </Button>
             
             {isOwner ? (
@@ -317,7 +281,7 @@ export const RideCard = ({
                   Edit
                 </Button>
                 <Button size="sm" variant="outline" leftIcon={<FiUserPlus />} onClick={handleViewRequests}>
-                  Requests
+                  View Requests
                 </Button>
                 <Button size="sm" variant="ghost" leftIcon={<FiXCircle />} onClick={handleCancelRide}>
                   Cancel
@@ -337,7 +301,7 @@ export const RideCard = ({
               <Button 
                 size="sm"
                 variant={isFull ? 'ghost' : 'primary'}
-                onClick={handleJoinRequest}
+                onClick={() => setShowRequestModal(true)}
                 disabled={isFull}
                 leftIcon={<FiSend />}
               >
@@ -349,36 +313,16 @@ export const RideCard = ({
       </Card>
 
       {/* Delete Confirmation Modal */}
-      <Modal 
-        isOpen={showDeleteConfirm} 
-        onClose={() => setShowDeleteConfirm(false)} 
-        title="Delete Ride" 
-        size="sm"
-      >
+      <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Delete Ride" size="sm">
         <div className="space-y-4">
           <div className="p-4 bg-error/10 border border-error/30 rounded-lg text-center">
             <FiAlertTriangle className="w-10 h-10 text-error mx-auto mb-3" />
             <p className="text-white font-medium mb-2">Permanently delete this ride?</p>
-            <p className="text-sm text-gray-400">
-              This action cannot be undone. All associated requests and messages will be deleted.
-            </p>
+            <p className="text-sm text-gray-400">This action cannot be undone.</p>
           </div>
-          
           <div className="flex gap-3 pt-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => setShowDeleteConfirm(false)}
-              disabled={deleteLoading}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="primary" 
-              fullWidth 
-              loading={deleteLoading}
-              onClick={handleDeleteRide}
-              className="bg-error hover:bg-error-dark"
-            >
+            <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)} disabled={deleteLoading}>Cancel</Button>
+            <Button variant="primary" fullWidth loading={deleteLoading} onClick={handleDeleteRide} className="bg-error hover:bg-error-dark">
               {deleteLoading ? 'Deleting...' : 'Yes, Delete Ride'}
             </Button>
           </div>
@@ -392,17 +336,13 @@ export const RideCard = ({
             <Input name="source" label="From *" value={editForm.source} onChange={(e) => setEditForm({...editForm, source: e.target.value})} />
             <Input name="destination" label="To *" value={editForm.destination} onChange={(e) => setEditForm({...editForm, destination: e.target.value})} />
           </div>
-          
           <Input name="dateTime" type="datetime-local" label="Date & Time *" value={editForm.dateTime?.toString()?.slice(0, 16)} onChange={(e) => setEditForm({...editForm, dateTime: e.target.value})} />
-          
           <div className="grid grid-cols-2 gap-4">
             <Input name="availableSeats" type="number" label="Available Seats" value={editForm.availableSeats} onChange={(e) => setEditForm({...editForm, availableSeats: parseInt(e.target.value)})} min={1} />
             <Input name="totalSeats" type="number" label="Total Seats" value={editForm.totalSeats} onChange={(e) => setEditForm({...editForm, totalSeats: parseInt(e.target.value)})} min={1} />
           </div>
-          
           <Input name="costPerPerson" type="number" label="Cost per Person (₹)" value={editForm.costPerPerson} onChange={(e) => setEditForm({...editForm, costPerPerson: parseFloat(e.target.value)})} />
           <Input name="description" type="textarea" label="Description" value={editForm.description} onChange={(e) => setEditForm({...editForm, description: e.target.value})} rows={3} />
-          
           <div className="flex gap-3 pt-4">
             <Button variant="ghost" onClick={() => setShowEditModal(false)}>Cancel</Button>
             <Button variant="primary" fullWidth loading={loading} onClick={handleEditRide}>Save Changes</Button>
@@ -418,10 +358,8 @@ export const RideCard = ({
             <p className="text-sm text-gray-400">Owner: {owner?.name}</p>
             <p className="text-sm text-gray-400">Available: {seatsLeft} seats</p>
           </div>
-          
           <Input name="seats" type="number" label="Number of Seats" value={seatsRequested} onChange={(e) => setSeatsRequested(parseInt(e.target.value) || 1)} min={1} max={seatsLeft} />
           <Input name="message" type="textarea" label="Message (Optional)" value={requestMessage} onChange={(e) => setRequestMessage(e.target.value)} rows={3} />
-          
           <div className="flex gap-3 pt-4">
             <Button variant="ghost" onClick={() => setShowRequestModal(false)}>Cancel</Button>
             <Button variant="primary" fullWidth loading={loading} onClick={handleJoinRequest}>Send Request</Button>
@@ -445,30 +383,17 @@ export const RideCard = ({
                   <Avatar src={req.user?.avatar} name={req.user?.name} size="md" />
                   <div className="flex-1">
                     <p className="text-white font-medium">{req.user?.name}</p>
-                    <p className="text-xs text-gray-400">{req.user?.email}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge size="sm">{req.seatsRequested} seat(s)</Badge>
-                      <Badge variant={req.status === 'PENDING' ? 'warning' : req.status === 'APPROVED' ? 'success' : 'error'} size="sm">
-                        {req.status}
-                      </Badge>
+                      <Badge variant={req.status === 'PENDING' ? 'warning' : req.status === 'APPROVED' ? 'success' : 'error'} size="sm">{req.status}</Badge>
                     </div>
                   </div>
                 </div>
-                
-                {req.message && (
-                  <div className="mb-3 p-3 bg-dark-bg rounded-lg">
-                    <p className="text-sm text-gray-300">"{req.message}"</p>
-                  </div>
-                )}
-                
+                {req.message && <p className="text-sm text-gray-300 mb-3">"{req.message}"</p>}
                 {req.status === 'PENDING' && (
                   <div className="flex gap-2">
-                    <Button size="sm" variant="primary" leftIcon={<FiCheck />} onClick={() => handleApproveRequest(req.id)}>
-                      Approve
-                    </Button>
-                    <Button size="sm" variant="ghost" leftIcon={<FiX />} onClick={() => handleRejectRequest(req.id)}>
-                      Reject
-                    </Button>
+                    <Button size="sm" variant="primary" leftIcon={<FiCheck />} onClick={() => handleApproveRequest(req.id)}>Approve</Button>
+                    <Button size="sm" variant="ghost" leftIcon={<FiX />} onClick={() => handleRejectRequest(req.id)}>Reject</Button>
                   </div>
                 )}
               </div>

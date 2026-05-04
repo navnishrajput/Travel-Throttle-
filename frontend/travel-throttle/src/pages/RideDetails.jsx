@@ -1,9 +1,9 @@
 /**
  * RIDE DETAILS PAGE
- * Full-featured ride view with proper participants display for all users
+ * Full-featured ride view with Passenger/Rider join options
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { rideService } from '../services/rideService';
@@ -20,7 +20,7 @@ import {
   FiUser, FiCheckCircle, FiPhone, FiChevronDown, FiChevronUp,
   FiRefreshCw, FiStar, FiLoader, FiAlertTriangle, FiEye, FiEyeOff
 } from 'react-icons/fi';
-import { FaMotorcycle, FaUserShield, FaUserFriends } from 'react-icons/fa';
+import { FaMotorcycle, FaUserShield } from 'react-icons/fa';
 
 export const RideDetails = () => {
   const { id } = useParams();
@@ -33,7 +33,6 @@ export const RideDetails = () => {
   const [myRequest, setMyRequest] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [bikeParticipants, setBikeParticipants] = useState([]);
-  const [allParticipants, setAllParticipants] = useState([]);
   const [messages, setMessages] = useState([]);
   const [incomingRequests, setIncomingRequests] = useState([]);
   const [userBikes, setUserBikes] = useState([]);
@@ -51,6 +50,7 @@ export const RideDetails = () => {
   // Modals
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showRequestsModal, setShowRequestsModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -72,7 +72,8 @@ export const RideDetails = () => {
   
   // Computed Properties
   const isOwner = user?.id === ride?.owner?.id || ride?.isOwner === true;
-  const isParticipant = allParticipants.some(p => p.id === user?.id);
+  const isParticipant = participants.some(p => p.id === user?.id);
+  const isBikeParticipant = bikeParticipants.some(p => p.id === user?.id);
   const isRequestPending = myRequest?.status === 'PENDING';
   const isRequestApproved = myRequest?.status === 'APPROVED';
   const isFull = ride?.availableSeats === 0;
@@ -82,12 +83,12 @@ export const RideDetails = () => {
   // Permissions
   const canJoin = !isOwner && !myRequest && ride?.status === 'UPCOMING' && !isFull;
   const canJoinAsRider = canJoin && userHasBike;
-  const canChat = isParticipant && (ride?.status === 'ONGOING' || ride?.status === 'UPCOMING');
+  const canChat = (isParticipant || isBikeParticipant || isOwner) && (ride?.status === 'ONGOING' || ride?.status === 'UPCOMING');
   const canEdit = isOwner && ride?.status === 'UPCOMING';
   const canDelete = isOwner;
   const canCancel = isOwner && ride?.status === 'UPCOMING';
   const canViewRequests = isOwner;
-  const totalParticipants = allParticipants.length;
+  const totalParticipants = participants.length + bikeParticipants.length;
 
   // Effects
   useEffect(() => {
@@ -96,23 +97,17 @@ export const RideDetails = () => {
       fetchUserBikes();
     }
     return () => {
-      if (chatIntervalRef.current) {
-        clearInterval(chatIntervalRef.current);
-      }
+      if (chatIntervalRef.current) clearInterval(chatIntervalRef.current);
     };
   }, [id]);
 
   useEffect(() => {
     if (ride && canChat && showChat) {
       fetchMessages();
-      chatIntervalRef.current = setInterval(() => {
-        fetchMessages(true);
-      }, 3000);
+      chatIntervalRef.current = setInterval(() => fetchMessages(true), 3000);
     }
     return () => {
-      if (chatIntervalRef.current) {
-        clearInterval(chatIntervalRef.current);
-      }
+      if (chatIntervalRef.current) clearInterval(chatIntervalRef.current);
     };
   }, [ride, canChat, showChat]);
 
@@ -123,11 +118,8 @@ export const RideDetails = () => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        fetchRideDetails(),
-        checkMyRequest(),
-      ]);
-      await fetchAllParticipantsData();
+      await Promise.all([fetchRideDetails(), checkMyRequest()]);
+      await fetchParticipants();
     } finally {
       setLoading(false);
     }
@@ -136,9 +128,7 @@ export const RideDetails = () => {
   const fetchUserBikes = async () => {
     try {
       const response = await bikeService.getMyBikes();
-      if (response.success) {
-        setUserBikes(response.data || []);
-      }
+      if (response.success) setUserBikes(response.data || []);
     } catch (error) {
       console.error('Error fetching user bikes:', error);
     }
@@ -147,13 +137,8 @@ export const RideDetails = () => {
   const fetchRideDetails = async () => {
     try {
       const response = await rideService.getRideById(id);
-      console.log('Ride details:', response);
-      if (response.success) {
-        setRide(response.data);
-      } else {
-        alert('Failed to load ride details');
-        navigate('/find-ride');
-      }
+      if (response.success) setRide(response.data);
+      else { alert('Failed to load ride details'); navigate('/find-ride'); }
     } catch (error) {
       console.error('Error fetching ride:', error);
       alert('Failed to load ride details');
@@ -164,7 +149,6 @@ export const RideDetails = () => {
   const checkMyRequest = async () => {
     try {
       const response = await requestService.getMyRequests();
-      console.log('My requests:', response);
       if (response.success) {
         const request = response.data.find(r => r.ride?.id === id);
         setMyRequest(request || null);
@@ -174,91 +158,26 @@ export const RideDetails = () => {
     }
   };
 
-  // CRITICAL FIX: Fetch ALL participants - works for both owner and participants
-  const fetchAllParticipantsData = async () => {
-    console.log('=== FETCHING ALL PARTICIPANTS ===', id);
-    
+  const fetchParticipants = async () => {
     try {
-      // First get ride details to get owner info
-      const rideResponse = await rideService.getRideById(id);
-      console.log('Ride details for participants:', rideResponse);
-      
-      const bikeParticipantsList = [];
-      const passengerParticipantsList = [];
-      
-      if (rideResponse.success && rideResponse.data) {
-        const rideData = rideResponse.data;
-        
-        // Add owner as bike participant
-        if (rideData.owner) {
-          bikeParticipantsList.push({
-            id: rideData.owner.id,
-            name: rideData.owner.name,
-            avatar: rideData.owner.avatar,
-            role: 'owner',
-            phone: rideData.owner.phone,
-            bike: rideData.bike,
-            isOwner: true
-          });
+      if (ride?.owner) {
+        setBikeParticipants([{
+          id: ride.owner.id, name: ride.owner.name, avatar: ride.owner.avatar,
+          role: 'owner', bike: ride.bike
+        }]);
+      }
+      if (isOwner) {
+        const response = await requestService.getRequestsByRide(id);
+        if (response.success) {
+          const approvedPassengers = response.data
+            .filter(req => req.status === 'APPROVED')
+            .map(req => ({
+              id: req.user?.id, name: req.user?.name, avatar: req.user?.avatar,
+              role: 'passenger', seats: req.seatsRequested
+            }));
+          setParticipants(approvedPassengers);
         }
       }
-      
-      // CRITICAL: Fetch ALL approved requests for this ride
-      // This endpoint should be accessible to all participants, not just owner
-      try {
-        // Use the public endpoint or modify backend to allow participants to view approved requests
-        const requestsResponse = await requestService.getRequestsByRide(id);
-        console.log('All requests for ride:', requestsResponse);
-        
-        if (requestsResponse.success && requestsResponse.data) {
-          const approvedRequests = requestsResponse.data.filter(
-            req => req.status === 'APPROVED'
-          );
-          
-          console.log('Approved requests found:', approvedRequests.length);
-          
-          // Add approved passengers
-          approvedRequests.forEach(req => {
-            if (req.user) {
-              passengerParticipantsList.push({
-                id: req.user.id,
-                name: req.user.name,
-                avatar: req.user.avatar,
-                role: 'passenger',
-                seats: req.seatsRequested,
-                phone: req.user.phone,
-                isOwner: false
-              });
-            }
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching requests:', error);
-        // If this fails, try to get participants from ride data
-        if (rideResponse.success && rideResponse.data) {
-          const rideData = rideResponse.data;
-          if (rideData.participants) {
-            rideData.participants.forEach(p => {
-              passengerParticipantsList.push({
-                ...p,
-                role: 'passenger',
-                isOwner: false
-              });
-            });
-          }
-        }
-      }
-      
-      console.log('Bike participants:', bikeParticipantsList.length);
-      console.log('Passenger participants:', passengerParticipantsList.length);
-      
-      setBikeParticipants(bikeParticipantsList);
-      setParticipants(passengerParticipantsList);
-      
-      // Combine all participants for easy access
-      const all = [...bikeParticipantsList, ...passengerParticipantsList];
-      setAllParticipants(all);
-      
     } catch (error) {
       console.error('Error fetching participants:', error);
     }
@@ -268,10 +187,7 @@ export const RideDetails = () => {
     if (!silent) setRefreshing(true);
     try {
       const response = await chatService.getMessages(id);
-      console.log('Messages:', response);
-      if (response.success) {
-        setMessages(response.data || []);
-      }
+      if (response.success) setMessages(response.data || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
@@ -281,11 +197,7 @@ export const RideDetails = () => {
 
   const refreshAll = async () => {
     setRefreshing(true);
-    await Promise.all([
-      fetchRideDetails(),
-      checkMyRequest(),
-      fetchAllParticipantsData(),
-    ]);
+    await Promise.all([fetchRideDetails(), checkMyRequest(), fetchParticipants()]);
     setRefreshing(false);
   };
 
@@ -302,26 +214,14 @@ export const RideDetails = () => {
   };
 
   const handleJoinRequest = async () => {
-    if (!joinType) {
-      alert('Please select how you want to join');
-      return;
-    }
-
-    if (joinType === 'rider' && !selectedBikeId) {
-      alert('Please select a bike');
-      return;
-    }
+    if (!joinType) { alert('Please select how you want to join'); return; }
+    if (joinType === 'rider' && !selectedBikeId) { alert('Please select a bike'); return; }
 
     setActionLoading(true);
     try {
       const response = await requestService.sendRequest(
-        id, 
-        requestMessage, 
-        joinType === 'passenger' ? seatsRequested : 0
+        id, requestMessage, joinType === 'passenger' ? seatsRequested : 0
       );
-      
-      console.log('Join request response:', response);
-      
       if (response.success) {
         alert(`Request sent successfully as ${joinType}!`);
         setShowJoinModal(false);
@@ -334,7 +234,6 @@ export const RideDetails = () => {
         alert(response.error || 'Failed to send request');
       }
     } catch (error) {
-      console.error('Join request error:', error);
       alert('Failed to send request');
     } finally {
       setActionLoading(false);
@@ -345,7 +244,6 @@ export const RideDetails = () => {
     setLoadingRequests(true);
     try {
       const response = await requestService.getRequestsByRide(id);
-      console.log('View requests response:', response);
       if (response.success) {
         setIncomingRequests(response.data || []);
         setShowRequestsModal(true);
@@ -353,7 +251,6 @@ export const RideDetails = () => {
         alert(response.error || 'Failed to fetch requests');
       }
     } catch (error) {
-      console.error('Error viewing requests:', error);
       alert('Failed to fetch requests');
     } finally {
       setLoadingRequests(false);
@@ -367,9 +264,7 @@ export const RideDetails = () => {
       if (response.success) {
         alert('Request approved!');
         const refreshed = await requestService.getRequestsByRide(id);
-        if (refreshed.success) {
-          setIncomingRequests(refreshed.data || []);
-        }
+        if (refreshed.success) setIncomingRequests(refreshed.data || []);
         refreshAll();
       } else {
         alert(response.error || 'Failed to approve');
@@ -388,9 +283,7 @@ export const RideDetails = () => {
       if (response.success) {
         alert('Request rejected');
         const refreshed = await requestService.getRequestsByRide(id);
-        if (refreshed.success) {
-          setIncomingRequests(refreshed.data || []);
-        }
+        if (refreshed.success) setIncomingRequests(refreshed.data || []);
       } else {
         alert(response.error || 'Failed to reject');
       }
@@ -403,19 +296,12 @@ export const RideDetails = () => {
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
-    
     setSendingMessage(true);
     try {
       const response = await chatService.sendMessage(id, newMessage);
-      console.log('Send message response:', response);
-      if (response.success) {
-        setNewMessage('');
-        await fetchMessages();
-      } else {
-        alert(response.error || 'Failed to send message');
-      }
+      if (response.success) { setNewMessage(''); await fetchMessages(); }
+      else alert(response.error || 'Failed to send message');
     } catch (error) {
-      console.error('Error sending message:', error);
       alert('Failed to send message');
     } finally {
       setSendingMessage(false);
@@ -431,16 +317,11 @@ export const RideDetails = () => {
 
   const handleCancelRide = async () => {
     if (!confirm('Cancel this ride? All participants will be notified.')) return;
-    
     setActionLoading(true);
     try {
       const response = await rideService.cancelRide(id);
-      if (response.success) {
-        alert('Ride cancelled');
-        navigate(ROUTES.PROTECTED.MY_RIDES.path);
-      } else {
-        alert(response.error || 'Failed to cancel');
-      }
+      if (response.success) { alert('Ride cancelled'); navigate(ROUTES.PROTECTED.MY_RIDES.path); }
+      else alert(response.error || 'Failed to cancel');
     } catch (error) {
       alert('Failed to cancel ride');
     } finally {
@@ -450,16 +331,11 @@ export const RideDetails = () => {
 
   const handleDeleteRide = async () => {
     if (!confirm('Permanently delete this ride?')) return;
-    
     setActionLoading(true);
     try {
       const response = await rideService.deleteRide(id);
-      if (response.success) {
-        alert('Ride deleted');
-        navigate(ROUTES.PROTECTED.MY_RIDES.path);
-      } else {
-        alert(response.error || 'Failed to delete');
-      }
+      if (response.success) { alert('Ride deleted'); navigate(ROUTES.PROTECTED.MY_RIDES.path); }
+      else alert(response.error || 'Failed to delete');
     } catch (error) {
       alert('Failed to delete ride');
     } finally {
@@ -475,10 +351,7 @@ export const RideDetails = () => {
   const StatBadge = ({ icon: Icon, label, value, color = 'primary' }) => (
     <div className="flex items-center gap-2 px-3 py-2 bg-dark-bg/50 rounded-lg">
       <Icon className={`w-4 h-4 text-${color}`} />
-      <div>
-        <p className="text-xs text-gray-400">{label}</p>
-        <p className="text-sm font-medium text-white">{value}</p>
-      </div>
+      <div><p className="text-xs text-gray-400">{label}</p><p className="text-sm font-medium text-white">{value}</p></div>
     </div>
   );
 
@@ -506,33 +379,15 @@ export const RideDetails = () => {
       <div className="sticky top-16 z-30 bg-dark-bg/95 backdrop-blur-lg py-4 -mx-4 px-4 border-b border-dark-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" leftIcon={<FiArrowLeft />} onClick={() => navigate(-1)}>
-              Back
-            </Button>
-            <h1 className="text-xl font-bold text-white truncate max-w-md">
-              {ride.source} → {ride.destination}
-            </h1>
-            {statusConfig && (
-              <Badge variant={statusConfig.color?.toLowerCase()} size="md">
-                {statusConfig.label}
-              </Badge>
-            )}
+            <Button variant="ghost" leftIcon={<FiArrowLeft />} onClick={() => navigate(-1)}>Back</Button>
+            <h1 className="text-xl font-bold text-white truncate max-w-md">{ride.source} → {ride.destination}</h1>
+            {statusConfig && <Badge variant={statusConfig.color?.toLowerCase()} size="md">{statusConfig.label}</Badge>}
             {isOwner && <Badge variant="primary">My Ride</Badge>}
-            {isParticipant && !isOwner && <Badge variant="success">Joined</Badge>}
           </div>
-          
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" leftIcon={<FiRefreshCw className={refreshing ? 'animate-spin' : ''} />} onClick={refreshAll}>
-              Refresh
-            </Button>
-            <Button variant="ghost" size="sm" leftIcon={<FiShare2 />} onClick={handleCopyLink}>
-              Share
-            </Button>
-            {canEdit && (
-              <Button variant="outline" size="sm" leftIcon={<FiEdit2 />} onClick={() => navigate(`/rides/${id}/edit`)}>
-                Edit
-              </Button>
-            )}
+            <Button variant="ghost" size="sm" leftIcon={<FiRefreshCw className={refreshing ? 'animate-spin' : ''} />} onClick={refreshAll}>Refresh</Button>
+            <Button variant="ghost" size="sm" leftIcon={<FiShare2 />} onClick={handleCopyLink}>Share</Button>
+            {canEdit && <Button variant="outline" size="sm" leftIcon={<FiEdit2 />} onClick={() => navigate(`/rides/${id}/edit`)}>Edit</Button>}
           </div>
         </div>
       </div>
@@ -541,18 +396,12 @@ export const RideDetails = () => {
       {!isOwner && myRequest && (
         <div className={`p-4 rounded-xl flex items-center justify-between ${
           isRequestPending ? 'bg-warning/10 border border-warning/30' :
-          isRequestApproved ? 'bg-success/10 border border-success/30' :
-          'bg-error/10 border border-error/30'
+          isRequestApproved ? 'bg-success/10 border border-success/30' : 'bg-error/10 border border-error/30'
         }`}>
           <div className="flex items-center gap-3">
             {isRequestPending && <FiClock className="w-5 h-5 text-warning" />}
             {isRequestApproved && <FiCheckCircle className="w-5 h-5 text-success" />}
-            <div>
-              <p className="font-medium text-white">
-                {isRequestPending && 'Request Pending'}
-                {isRequestApproved && 'Request Approved!'}
-              </p>
-            </div>
+            <div><p className="font-medium text-white">{isRequestPending ? 'Request Pending' : 'Request Approved!'}</p></div>
           </div>
         </div>
       )}
@@ -569,17 +418,10 @@ export const RideDetails = () => {
                 <div className="w-4 h-4 rounded-full bg-accent" />
               </div>
               <div className="flex-1 space-y-4">
-                <div>
-                  <p className="text-sm text-gray-400 mb-1">From</p>
-                  <p className="text-xl font-semibold text-white">{ride.source}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400 mb-1">To</p>
-                  <p className="text-xl font-semibold text-white">{ride.destination}</p>
-                </div>
+                <div><p className="text-sm text-gray-400 mb-1">From</p><p className="text-xl font-semibold text-white">{ride.source}</p></div>
+                <div><p className="text-sm text-gray-400 mb-1">To</p><p className="text-xl font-semibold text-white">{ride.destination}</p></div>
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <StatBadge icon={FiCalendar} label="Date" value={formatDate.short(ride.dateTime)} />
               <StatBadge icon={FiClock} label="Time" value={formatDate.time(ride.dateTime)} />
@@ -592,21 +434,14 @@ export const RideDetails = () => {
           <Card>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <FiMessageCircle className="w-5 h-5 text-primary" />
-                Group Chat {canChat && <Badge size="sm" variant="success">Active</Badge>}
+                <FiMessageCircle className="w-5 h-5 text-primary" /> Group Chat {canChat && <Badge size="sm" variant="success">Active</Badge>}
               </h3>
-              <button onClick={() => setShowChat(!showChat)}>
-                {showChat ? <FiChevronUp /> : <FiChevronDown />}
-              </button>
+              <button onClick={() => setShowChat(!showChat)}>{showChat ? <FiChevronUp /> : <FiChevronDown />}</button>
             </div>
-            
             {showChat && (
               <>
                 {!canChat ? (
-                  <div className="text-center py-8">
-                    <FiMessageCircle className="w-12 h-12 text-gray-500 mx-auto mb-3 opacity-50" />
-                    <p className="text-gray-400">Join this ride to access the group chat</p>
-                  </div>
+                  <p className="text-gray-400 text-center py-8">Join this ride to access the group chat</p>
                 ) : (
                   <>
                     <div className="h-64 overflow-y-auto space-y-3 mb-4 p-2">
@@ -620,14 +455,10 @@ export const RideDetails = () => {
                               {!isOwn && <Avatar src={msg.sender?.avatar} name={msg.sender?.name} size="sm" />}
                               <div className={`max-w-[70%] ${isOwn ? 'items-end' : ''}`}>
                                 {!isOwn && <p className="text-xs text-gray-400 mb-1 ml-1">{msg.sender?.name}</p>}
-                                <div className={`px-4 py-2 rounded-2xl ${
-                                  isOwn ? 'bg-primary text-white' : 'bg-dark-bg text-gray-200'
-                                }`}>
+                                <div className={`px-4 py-2 rounded-2xl ${isOwn ? 'bg-primary text-white' : 'bg-dark-bg text-gray-200'}`}>
                                   <p className="text-sm">{msg.content}</p>
                                 </div>
-                                <p className={`text-xs text-gray-500 mt-1 ${isOwn ? 'text-right' : ''}`}>
-                                  {formatDate.time(msg.timestamp)}
-                                </p>
+                                <p className={`text-xs text-gray-500 mt-1 ${isOwn ? 'text-right' : ''}`}>{formatDate.time(msg.timestamp)}</p>
                               </div>
                             </div>
                           );
@@ -635,18 +466,9 @@ export const RideDetails = () => {
                       )}
                       <div ref={messagesEndRef} />
                     </div>
-                    
                     <div className="flex gap-2">
-                      <Input
-                        placeholder="Type a message..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        className="flex-1"
-                      />
-                      <Button variant="primary" onClick={handleSendMessage} disabled={!newMessage.trim() || sendingMessage}>
-                        <FiSend className="w-4 h-4" />
-                      </Button>
+                      <Input placeholder="Type a message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyPress={handleKeyPress} className="flex-1" />
+                      <Button variant="primary" onClick={handleSendMessage} disabled={!newMessage.trim() || sendingMessage}><FiSend className="w-4 h-4" /></Button>
                     </div>
                   </>
                 )}
@@ -664,95 +486,37 @@ export const RideDetails = () => {
               <Avatar src={ride.owner?.avatar} name={ride.owner?.name} size="xl" />
               <div>
                 <p className="text-white font-semibold">{ride.owner?.name}</p>
-                {ride.owner?.rating && (
-                  <p className="text-yellow-500 flex items-center gap-1">
-                    <FiStar className="fill-current" /> {ride.owner.rating.toFixed(1)}
-                  </p>
-                )}
+                {ride.owner?.rating && <p className="text-yellow-500 flex items-center gap-1"><FiStar className="fill-current" /> {ride.owner.rating.toFixed(1)}</p>}
               </div>
             </div>
           </Card>
 
-          {/* Participants Card - VISIBLE TO ALL */}
+          {/* Participants Card */}
           <Card>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">
-                Participants ({totalParticipants})
-              </h3>
-              <button onClick={() => setShowParticipants(!showParticipants)}>
-                {showParticipants ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
-              </button>
+              <h3 className="text-lg font-semibold text-white">Participants ({totalParticipants})</h3>
+              <button onClick={() => setShowParticipants(!showParticipants)}>{showParticipants ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}</button>
             </div>
-            
             {showParticipants && (
-              <div className="space-y-3 max-h-80 overflow-y-auto">
-                {/* Bikers Section */}
-                {bikeParticipants.length > 0 && (
-                  <>
-                    <p className="text-xs text-gray-400 font-medium flex items-center gap-1">
-                      <FaMotorcycle className="w-3 h-3 text-primary" /> 
-                      BIKERS ({bikeParticipants.length})
-                    </p>
-                    {bikeParticipants.map((p) => (
-                      <div key={p.id} className="flex items-center gap-3 p-2 rounded-lg bg-primary/5">
-                        <Avatar src={p.avatar} name={p.name} size="md" />
-                        <div className="flex-1">
-                          <p className="text-white text-sm font-medium">
-                            {p.name} {p.id === user?.id && <span className="text-gray-400">(You)</span>}
-                          </p>
-                          <p className="text-xs text-gray-400 flex items-center gap-1">
-                            <FaMotorcycle className="w-3 h-3" />
-                            {p.role === 'owner' ? 'Ride Owner' : 'Rider'}
-                            {p.bike?.model && ` • ${p.bike.model}`}
-                          </p>
-                        </div>
-                        {p.phone && p.id !== user?.id && (
-                          <button 
-                            className="p-2 text-gray-400 hover:text-primary"
-                            onClick={() => window.location.href = `tel:${p.phone}`}
-                          >
-                            <FiPhone className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </>
-                )}
-                
-                {/* Passengers Section */}
-                {participants.length > 0 && (
-                  <>
-                    <p className="text-xs text-gray-400 font-medium flex items-center gap-1 mt-3">
-                      <FiUser className="w-3 h-3 text-accent" /> 
-                      PASSENGERS ({participants.length})
-                    </p>
-                    {participants.map((p) => (
-                      <div key={p.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-dark-card/50">
-                        <Avatar src={p.avatar} name={p.name} size="md" />
-                        <div className="flex-1">
-                          <p className="text-white text-sm font-medium">
-                            {p.name} {p.id === user?.id && <span className="text-gray-400">(You)</span>}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            Passenger • {p.seats} seat(s)
-                          </p>
-                        </div>
-                        {p.phone && p.id !== user?.id && (
-                          <button 
-                            className="p-2 text-gray-400 hover:text-primary"
-                            onClick={() => window.location.href = `tel:${p.phone}`}
-                          >
-                            <FiPhone className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </>
-                )}
-                
-                {totalParticipants === 0 && (
-                  <p className="text-gray-400 text-center py-4">No participants yet</p>
-                )}
+              <div className="space-y-3">
+                {bikeParticipants.map((p, i) => (
+                  <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-primary/5">
+                    <Avatar src={p.avatar} name={p.name} size="sm" />
+                    <div className="flex-1">
+                      <p className="text-white">{p.name}</p>
+                      <p className="text-xs text-gray-400 flex items-center gap-1"><FaMotorcycle className="w-3 h-3" />{p.role === 'owner' ? 'Owner' : 'Rider'}</p>
+                    </div>
+                    <Badge variant="primary" size="sm">Bike</Badge>
+                  </div>
+                ))}
+                {participants.map((p, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Avatar src={p.avatar} name={p.name} size="sm" />
+                    <div className="flex-1"><p className="text-white">{p.name}</p><p className="text-xs text-gray-400">{p.seats} seat(s)</p></div>
+                    <Badge size="sm">Passenger</Badge>
+                  </div>
+                ))}
+                {totalParticipants === 0 && <p className="text-gray-400 text-center py-4">No participants yet</p>}
               </div>
             )}
           </Card>
@@ -761,36 +525,11 @@ export const RideDetails = () => {
           <Card>
             <h3 className="text-lg font-semibold text-white mb-4">Actions</h3>
             <div className="space-y-3">
-              {canJoin && (
-                <Button variant="primary" fullWidth size="lg" onClick={handleOpenJoinModal} leftIcon={<FiUserPlus />}>
-                  Join This Ride
-                </Button>
-              )}
-              
-              {isRequestPending && (
-                <div className="text-center p-3 bg-warning/10 rounded-lg">
-                  <FiClock className="w-5 h-5 text-warning mx-auto mb-1" />
-                  <p className="text-warning font-medium">Request Pending</p>
-                </div>
-              )}
-              
-              {canViewRequests && (
-                <Button variant="outline" fullWidth leftIcon={<FiUsers />} onClick={handleViewRequests}>
-                  View Requests
-                </Button>
-              )}
-              
-              {canCancel && (
-                <Button variant="ghost" fullWidth leftIcon={<FiXCircle />} onClick={handleCancelRide} className="text-warning">
-                  Cancel Ride
-                </Button>
-              )}
-              
-              {canDelete && (
-                <Button variant="ghost" fullWidth leftIcon={<FiTrash2 />} onClick={handleDeleteRide} className="text-error">
-                  Delete Ride
-                </Button>
-              )}
+              {canJoin && <Button variant="primary" fullWidth size="lg" onClick={handleOpenJoinModal} leftIcon={<FiUserPlus />}>Join This Ride</Button>}
+              {isRequestPending && <div className="text-center p-3 bg-warning/10 rounded-lg"><FiClock className="w-5 h-5 text-warning mx-auto mb-1" /><p className="text-warning font-medium">Request Pending</p></div>}
+              {canViewRequests && <Button variant="outline" fullWidth leftIcon={<FiUsers />} onClick={handleViewRequests}>View Requests</Button>}
+              {canCancel && <Button variant="ghost" fullWidth leftIcon={<FiXCircle />} onClick={handleCancelRide} className="text-warning">Cancel Ride</Button>}
+              {canDelete && <Button variant="ghost" fullWidth leftIcon={<FiTrash2 />} onClick={handleDeleteRide} className="text-error">Delete Ride</Button>}
             </div>
           </Card>
         </div>
@@ -799,102 +538,35 @@ export const RideDetails = () => {
       {/* Join Modal */}
       <Modal isOpen={showJoinModal} onClose={() => setShowJoinModal(false)} title="Join This Ride" size="md">
         <div className="space-y-4">
-          <p className="text-gray-300">How would you like to join?</p>
-          
+          <p className="text-gray-300">How would you like to join this ride?</p>
           <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => setJoinType('passenger')}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                joinType === 'passenger'
-                  ? 'border-primary bg-primary/10'
-                  : 'border-dark-border hover:border-gray-500'
-              }`}
-            >
+            <button onClick={() => setJoinType('passenger')} className={`p-4 rounded-xl border-2 transition-all ${joinType === 'passenger' ? 'border-primary bg-primary/10' : 'border-dark-border hover:border-gray-500'}`}>
               <FiUser className="w-8 h-8 text-primary mb-2" />
               <p className="text-white font-semibold">As Passenger</p>
               <p className="text-sm text-gray-400">Share the ride cost</p>
             </button>
-            
-            <button
-              onClick={() => setJoinType('rider')}
-              disabled={!canJoinAsRider}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                !canJoinAsRider
-                  ? 'border-dark-border opacity-50 cursor-not-allowed'
-                  : joinType === 'rider'
-                    ? 'border-primary bg-primary/10'
-                    : 'border-dark-border hover:border-gray-500'
-              }`}
-            >
+            <button onClick={() => setJoinType('rider')} disabled={!canJoinAsRider} className={`p-4 rounded-xl border-2 transition-all ${!canJoinAsRider ? 'border-dark-border opacity-50 cursor-not-allowed' : joinType === 'rider' ? 'border-primary bg-primary/10' : 'border-dark-border hover:border-gray-500'}`}>
               <FaMotorcycle className="w-8 h-8 text-primary mb-2" />
               <p className="text-white font-semibold">As Rider</p>
               <p className="text-sm text-gray-400">Join with your bike</p>
-              {!canJoinAsRider && (
-                <p className="text-xs text-warning mt-1">Add a bike first</p>
-              )}
+              {!canJoinAsRider && <p className="text-xs text-warning mt-1">Add a bike first</p>}
             </button>
           </div>
-          
           {joinType === 'passenger' && (
             <div className="space-y-3 pt-3 border-t border-dark-border">
-              <Input
-                name="seats"
-                type="number"
-                label="Number of Seats"
-                value={seatsRequested}
-                onChange={(e) => setSeatsRequested(parseInt(e.target.value) || 1)}
-                min={1}
-                max={ride.availableSeats}
-              />
-              <Input
-                name="message"
-                type="textarea"
-                label="Message (Optional)"
-                value={requestMessage}
-                onChange={(e) => setRequestMessage(e.target.value)}
-                rows={3}
-              />
+              <Input name="seats" type="number" label="Number of Seats" value={seatsRequested} onChange={(e) => setSeatsRequested(parseInt(e.target.value) || 1)} min={1} max={ride.availableSeats} />
+              <Input name="message" type="textarea" label="Message (Optional)" value={requestMessage} onChange={(e) => setRequestMessage(e.target.value)} rows={3} />
             </div>
           )}
-          
           {joinType === 'rider' && (
             <div className="space-y-3 pt-3 border-t border-dark-border">
-              <Input
-                name="bikeId"
-                type="select"
-                label="Select Your Bike"
-                value={selectedBikeId}
-                onChange={(e) => setSelectedBikeId(e.target.value)}
-                options={[
-                  { value: '', label: 'Select a bike', disabled: true },
-                  ...userBikes.map(bike => ({
-                    value: bike.id,
-                    label: `${bike.model} - ${bike.registrationNumber}`
-                  }))
-                ]}
-              />
-              <Input
-                name="message"
-                type="textarea"
-                label="Message (Optional)"
-                value={requestMessage}
-                onChange={(e) => setRequestMessage(e.target.value)}
-                rows={3}
-              />
+              <Input name="bikeId" type="select" label="Select Your Bike" value={selectedBikeId} onChange={(e) => setSelectedBikeId(e.target.value)} options={[{ value: '', label: 'Select a bike', disabled: true }, ...userBikes.map(bike => ({ value: bike.id, label: `${bike.model} - ${bike.registrationNumber}` }))]} />
+              <Input name="message" type="textarea" label="Message (Optional)" value={requestMessage} onChange={(e) => setRequestMessage(e.target.value)} rows={3} />
             </div>
           )}
-          
           <div className="flex gap-3 pt-4">
             <Button variant="ghost" onClick={() => setShowJoinModal(false)}>Cancel</Button>
-            <Button 
-              variant="primary" 
-              fullWidth 
-              loading={actionLoading} 
-              onClick={handleJoinRequest}
-              disabled={!joinType || (joinType === 'rider' && !selectedBikeId)}
-            >
-              Send Request
-            </Button>
+            <Button variant="primary" fullWidth loading={actionLoading} onClick={handleJoinRequest} disabled={!joinType || (joinType === 'rider' && !selectedBikeId)}>Send Request</Button>
           </div>
         </div>
       </Modal>
@@ -903,9 +575,7 @@ export const RideDetails = () => {
       <Modal isOpen={showRequestsModal} onClose={() => setShowRequestsModal(false)} title="Incoming Requests" size="md">
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {loadingRequests ? (
-            <div className="flex justify-center py-8">
-              <FiLoader className="w-6 h-6 text-primary animate-spin" />
-            </div>
+            <div className="flex justify-center py-8"><FiLoader className="w-6 h-6 text-primary animate-spin" /></div>
           ) : incomingRequests.length === 0 ? (
             <p className="text-gray-400 text-center py-8">No requests yet</p>
           ) : (
@@ -916,20 +586,14 @@ export const RideDetails = () => {
                   <div className="flex-1">
                     <p className="text-white font-medium">{req.user?.name}</p>
                     <Badge size="sm">{req.seatsRequested} seat(s)</Badge>
-                    <Badge variant={req.status === 'PENDING' ? 'warning' : req.status === 'APPROVED' ? 'success' : 'error'} size="sm" className="ml-2">
-                      {req.status}
-                    </Badge>
+                    <Badge variant={req.status === 'PENDING' ? 'warning' : req.status === 'APPROVED' ? 'success' : 'error'} size="sm" className="ml-2">{req.status}</Badge>
                   </div>
                 </div>
                 {req.message && <p className="text-sm text-gray-300 mb-3">"{req.message}"</p>}
                 {req.status === 'PENDING' && (
                   <div className="flex gap-2">
-                    <Button size="sm" variant="primary" leftIcon={<FiCheck />} onClick={() => handleApproveRequest(req.id)}>
-                      Approve
-                    </Button>
-                    <Button size="sm" variant="ghost" leftIcon={<FiX />} onClick={() => handleRejectRequest(req.id)}>
-                      Reject
-                    </Button>
+                    <Button size="sm" variant="primary" leftIcon={<FiCheck />} onClick={() => handleApproveRequest(req.id)}>Approve</Button>
+                    <Button size="sm" variant="ghost" leftIcon={<FiX />} onClick={() => handleRejectRequest(req.id)}>Reject</Button>
                   </div>
                 )}
               </div>

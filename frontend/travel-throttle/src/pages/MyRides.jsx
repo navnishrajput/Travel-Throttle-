@@ -9,7 +9,7 @@ import { rideService } from '../services/rideService';
 import { requestService } from '../services/requestService';
 import { useAuth } from '../context/AuthContext';
 import { Card, Button, Badge, Avatar } from '../components/common';
-import { RideCard } from '../components/features';
+import RideCard from '../components/features/RideCard';
 import { 
   FiPlus, FiList, FiUser, FiRefreshCw, FiChevronDown, FiChevronUp, 
   FiCheck, FiX, FiLoader, FiAlertCircle, FiCheckCircle, FiXCircle 
@@ -42,9 +42,7 @@ export const MyRides = () => {
     setError('');
     
     try {
-      console.log('Fetching my rides...');
       const response = await rideService.getMyRides();
-      console.log('MyRides response:', response);
       
       if (response.success) {
         const rides = Array.isArray(response.data) ? response.data : [];
@@ -61,8 +59,6 @@ export const MyRides = () => {
           if (ride.owner && ride.owner.id !== user?.id) return true;
           return false;
         });
-        
-        console.log('Created rides:', created.length, 'Joined rides:', joined.length);
         
         setCreatedRides(created);
         setJoinedRides(joined);
@@ -94,7 +90,6 @@ export const MyRides = () => {
     setLoadingRequests(prev => ({ ...prev, [rideId]: true }));
     try {
       const response = await requestService.getRequestsByRide(rideId);
-      console.log('Requests for ride', rideId, ':', response);
       if (response.success) {
         setRideRequests(prev => ({ ...prev, [rideId]: response.data || [] }));
       }
@@ -114,64 +109,46 @@ export const MyRides = () => {
     }
   };
 
-const handleApproveRequest = async (rideId, requestId, seatsRequested) => {
-  console.log('=== APPROVE REQUEST ===');
-  console.log('RideId:', rideId, 'RequestId:', requestId, 'Seats:', seatsRequested);
-  
-  setApprovingRequest(prev => ({ ...prev, [requestId]: true }));
-  setError('');
-  setSuccessMessage('');
-  
-  try {
-    const response = await requestService.approveRequest(requestId);
-    console.log('Approve response:', response);
+  const handleApproveRequest = async (rideId, requestId, seatsRequested) => {
+    setApprovingRequest(prev => ({ ...prev, [requestId]: true }));
+    setError('');
+    setSuccessMessage('');
     
-    if (response.success) {
-      setSuccessMessage(`Request approved successfully! ${seatsRequested} seat(s) allocated.`);
-      setTimeout(() => setSuccessMessage(''), 3000);
-      
-      await fetchRequestsForRide(rideId);
-      setRefreshKey(prev => prev + 1);
-    } else {
-      // Show the actual error message from backend
-      const errorMsg = response.error || response.message || 'Failed to approve request';
-      setError(errorMsg);
-      setTimeout(() => setError(''), 5000);
+    try {
+      const response = await requestService.approveRequest(requestId);
+      if (response.success) {
+        setSuccessMessage(`Request approved successfully! ${seatsRequested} seat(s) allocated.`);
+        setTimeout(() => setSuccessMessage(''), 3000);
+        await fetchRequestsForRide(rideId);
+        setRefreshKey(prev => prev + 1);
+      } else {
+        setError(response.error || 'Failed to approve request');
+        setTimeout(() => setError(''), 5000);
+      }
+    } catch (error) {
+      setError('Failed to approve request. Please try again.');
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setApprovingRequest(prev => ({ ...prev, [requestId]: false }));
     }
-  } catch (error) {
-    console.error('Approve error:', error);
-    const errorMsg = error?.response?.data?.message || 
-                     error?.message || 
-                     'Failed to approve request. Please try again.';
-    setError(errorMsg);
-    setTimeout(() => setError(''), 5000);
-  } finally {
-    setApprovingRequest(prev => ({ ...prev, [requestId]: false }));
-  }
-};
+  };
+
   const handleRejectRequest = async (rideId, requestId) => {
-    console.log('Rejecting request:', requestId);
-    
     setRejectingRequest(prev => ({ ...prev, [requestId]: true }));
     setError('');
     setSuccessMessage('');
     
     try {
       const response = await requestService.rejectRequest(requestId);
-      console.log('Reject response:', response);
-      
       if (response.success) {
         setSuccessMessage('Request rejected');
         setTimeout(() => setSuccessMessage(''), 3000);
-        
-        // Refresh requests list
         await fetchRequestsForRide(rideId);
       } else {
         setError(response.error || 'Failed to reject request');
         setTimeout(() => setError(''), 3000);
       }
     } catch (error) {
-      console.error('Reject error:', error);
       setError('Failed to reject request. Please try again.');
       setTimeout(() => setError(''), 3000);
     } finally {
@@ -235,7 +212,6 @@ const handleApproveRequest = async (rideId, requestId, seatsRequested) => {
         </Link>
       </div>
 
-      {/* Error Message */}
       {error && (
         <div className="p-4 bg-error/10 border border-error/30 rounded-lg flex items-center gap-3">
           <FiAlertCircle className="w-5 h-5 text-error" />
@@ -243,7 +219,6 @@ const handleApproveRequest = async (rideId, requestId, seatsRequested) => {
         </div>
       )}
 
-      {/* Success Message */}
       {successMessage && (
         <div className="p-4 bg-success/10 border border-success/30 rounded-lg flex items-center gap-3">
           <FiCheckCircle className="w-5 h-5 text-success" />
@@ -289,14 +264,8 @@ const handleApproveRequest = async (rideId, requestId, seatsRequested) => {
               
               return (
                 <div key={ride.id} className="border border-dark-border rounded-xl overflow-hidden">
-                  {/* Ride Card */}
-                  <RideCard 
-                    ride={ride} 
-                    variant="compact" 
-                    onRefresh={handleRefresh}
-                  />
+                  <RideCard ride={ride} variant="compact" onRefresh={handleRefresh} />
                   
-                  {/* Show requests section for created rides (owner) */}
                   {activeTab === 'created' && (
                     <div className="border-t border-dark-border bg-dark-bg/30">
                       <button
@@ -353,7 +322,6 @@ const handleApproveRequest = async (rideId, requestId, seatsRequested) => {
                                       </Badge>
                                     </div>
                                     
-                                    {/* Owner Actions - Approve/Reject */}
                                     {req.status === 'PENDING' && !isOwnRequest && (
                                       <div className="flex gap-2 mt-3">
                                         <Button 
@@ -377,7 +345,6 @@ const handleApproveRequest = async (rideId, requestId, seatsRequested) => {
                                       </div>
                                     )}
                                     
-                                    {/* Requester Action - Cancel */}
                                     {req.status === 'PENDING' && isOwnRequest && (
                                       <div className="flex gap-2 mt-3">
                                         <Button 
@@ -404,7 +371,6 @@ const handleApproveRequest = async (rideId, requestId, seatsRequested) => {
                     </div>
                   )}
                   
-                  {/* Show cancel option for joined rides (passenger's own requests) */}
                   {activeTab === 'joined' && (
                     <div className="border-t border-dark-border bg-dark-bg/30 p-3">
                       <Button 
@@ -439,16 +405,12 @@ const handleApproveRequest = async (rideId, requestId, seatsRequested) => {
             </p>
             {activeTab === 'created' && (
               <Link to={ROUTES.PROTECTED.CREATE_RIDE.path}>
-                <Button variant="primary" size="sm">
-                  Create Your First Ride
-                </Button>
+                <Button variant="primary" size="sm">Create Your First Ride</Button>
               </Link>
             )}
             {activeTab === 'joined' && (
               <Link to={ROUTES.PROTECTED.FIND_RIDE.path}>
-                <Button variant="primary" size="sm">
-                  Find a Ride to Join
-                </Button>
+                <Button variant="primary" size="sm">Find a Ride to Join</Button>
               </Link>
             )}
           </div>

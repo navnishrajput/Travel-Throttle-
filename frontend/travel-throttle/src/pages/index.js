@@ -1,5 +1,6 @@
-/**
+﻿/**
  * PAGES BARREL EXPORT
+ * Only exports PAGE components, not feature components
  */
 
 export { default as Landing } from './Landing';
@@ -14,3 +15,7 @@ export { default as MyRides } from './MyRides';
 export { default as Messages } from './Messages';
 export { default as Garage } from './Garage';
 export { default as Notifications } from './Notifications';
+export { default as OAuth2Redirect } from './OAuth2Redirect';
+export { default as GroupRides } from './GroupRides';
+export { default as CreateGroupRide } from './CreateGroupRide';
+export { default as GroupRideDetails } from './GroupRideDetails';

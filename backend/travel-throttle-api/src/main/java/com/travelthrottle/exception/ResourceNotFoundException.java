@@ -49,4 +49,17 @@ public class ResourceNotFoundException extends RuntimeException {
     public static ResourceNotFoundException notification(String notificationId) {
         return new ResourceNotFoundException("Notification", "id", notificationId);
     }
+
+    // NEW METHODS
+    public static ResourceNotFoundException groupRide(String groupRideId) {
+        return new ResourceNotFoundException("Group Ride", "id", groupRideId);
+    }
+
+    public static ResourceNotFoundException member(String memberId) {
+        return new ResourceNotFoundException("Group Ride Member", "id", memberId);
+    }
+
+    public static ResourceNotFoundException emergencyContact(String contactId) {
+        return new ResourceNotFoundException("Emergency Contact", "id", contactId);
+    }
 }

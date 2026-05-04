@@ -1,12 +1,12 @@
 /**
  * SIDEBAR COMPONENT
- * Main navigation sidebar
+ * Main navigation sidebar with Group Rides
  */
 
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../utils/helpers';
-import { ROUTES, IMAGES } from '../../constants';
+import { ROUTES } from '../../constants';
 import { Avatar } from '../common';
 import { 
   FiHome, 
@@ -20,6 +20,7 @@ import {
   FiChevronRight,
   FiBell
 } from 'react-icons/fi';
+import { FaUsers } from 'react-icons/fa';
 
 // Navigation items configuration
 const NAV_ITEMS = [
@@ -40,6 +41,12 @@ const NAV_ITEMS = [
     icon: FiPlusCircle,
     label: 'Create Ride',
     path: ROUTES.PROTECTED.CREATE_RIDE.path,
+  },
+  {
+    id: 'nav-group-rides',
+    icon: FaUsers,
+    label: 'Group Rides',
+    path: '/group-rides',
   },
   {
     id: 'nav-my-rides',

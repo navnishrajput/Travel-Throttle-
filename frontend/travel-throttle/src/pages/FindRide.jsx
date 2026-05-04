@@ -4,12 +4,14 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { rideService } from '../services/rideService';
 import { Card, Button, Input, Badge } from '../components/common';
-import { RideCard } from '../components/features';
+import RideCard from '../components/features/RideCard';
 import { FiSearch, FiFilter, FiX, FiRefreshCw, FiLoader } from 'react-icons/fi';
 
 export const FindRide = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rides, setRides] = useState([]);
@@ -29,7 +31,6 @@ export const FindRide = () => {
   }, []);
 
   useEffect(() => {
-    // Filter rides based on search term
     if (Array.isArray(rides)) {
       const filtered = rides.filter(ride => {
         if (!ride) return false;
@@ -52,9 +53,7 @@ export const FindRide = () => {
     setError('');
     
     try {
-      console.log('=== FETCHING ALL RIDES ===');
       const response = await rideService.getAllRides();
-      console.log('Rides response:', response);
       
       if (response.success) {
         let ridesData = [];
@@ -64,29 +63,14 @@ export const FindRide = () => {
           ridesData = response.data;
         }
         
-        console.log('Raw rides data:', ridesData.length, 'items');
-        
-        // Filter out null values and only UPCOMING rides with available seats
         const validRides = ridesData.filter(ride => {
-          if (!ride || !ride.id) {
-            console.log('Invalid ride (no ID):', ride);
-            return false;
-          }
-          
-          const isUpcoming = ride.status === 'UPCOMING';
-          const hasSeats = ride.availableSeats > 0;
-          const isFuture = ride.dateTime && new Date(ride.dateTime) > new Date();
-          
-          console.log(`Ride ${ride.id}: status=${ride.status}, seats=${ride.availableSeats}, isUpcoming=${isUpcoming}, hasSeats=${hasSeats}, isFuture=${isFuture}`);
-          
-          return isUpcoming && hasSeats && isFuture;
+          if (!ride || !ride.id) return false;
+          return ride.status === 'UPCOMING' && ride.availableSeats > 0;
         });
         
-        console.log('Valid rides:', validRides.length);
         setRides(validRides);
         setFilteredRides(validRides);
       } else {
-        console.error('Failed to fetch rides:', response.error);
         setError(response.error || 'Failed to fetch rides');
         setRides([]);
         setFilteredRides([]);
@@ -107,9 +91,6 @@ export const FindRide = () => {
     setError('');
     
     try {
-      console.log('=== SEARCHING RIDES ===');
-      console.log('Filters:', filters);
-      
       const searchFilters = {};
       if (filters.source) searchFilters.source = filters.source;
       if (filters.destination) searchFilters.destination = filters.destination;
@@ -117,7 +98,6 @@ export const FindRide = () => {
       if (filters.minSeats) searchFilters.minSeats = filters.minSeats;
       
       const response = await rideService.searchRides(searchFilters);
-      console.log('Search response:', response);
       
       if (response.success) {
         let ridesData = [];
@@ -131,7 +111,6 @@ export const FindRide = () => {
           ride && ride.id && ride.status === 'UPCOMING' && ride.availableSeats > 0
         );
         
-        console.log('Search found', validRides.length, 'valid rides');
         setRides(validRides);
         setFilteredRides(validRides);
       } else {
@@ -218,45 +197,16 @@ export const FindRide = () => {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-white font-medium">Filters</h3>
               {activeFiltersCount > 0 && (
-                <button
-                  onClick={clearFilters}
-                  className="text-sm text-gray-400 hover:text-white flex items-center gap-1"
-                >
+                <button onClick={clearFilters} className="text-sm text-gray-400 hover:text-white flex items-center gap-1">
                   <FiX className="w-4 h-4" /> Clear all
                 </button>
               )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                name="source"
-                label="From"
-                placeholder="Source"
-                value={filters.source}
-                onChange={(e) => setFilters({...filters, source: e.target.value})}
-              />
-              <Input
-                name="destination"
-                label="To"
-                placeholder="Destination"
-                value={filters.destination}
-                onChange={(e) => setFilters({...filters, destination: e.target.value})}
-              />
-              <Input
-                name="maxPrice"
-                type="number"
-                label="Max Price (₹)"
-                placeholder="Any"
-                value={filters.maxPrice}
-                onChange={(e) => setFilters({...filters, maxPrice: e.target.value})}
-              />
-              <Input
-                name="minSeats"
-                type="number"
-                label="Min Seats"
-                placeholder="Any"
-                value={filters.minSeats}
-                onChange={(e) => setFilters({...filters, minSeats: e.target.value})}
-              />
+              <Input name="source" label="From" placeholder="Source" value={filters.source} onChange={(e) => setFilters({...filters, source: e.target.value})} />
+              <Input name="destination" label="To" placeholder="Destination" value={filters.destination} onChange={(e) => setFilters({...filters, destination: e.target.value})} />
+              <Input name="maxPrice" type="number" label="Max Price (₹)" placeholder="Any" value={filters.maxPrice} onChange={(e) => setFilters({...filters, maxPrice: e.target.value})} />
+              <Input name="minSeats" type="number" label="Min Seats" placeholder="Any" value={filters.minSeats} onChange={(e) => setFilters({...filters, minSeats: e.target.value})} />
             </div>
           </div>
         )}

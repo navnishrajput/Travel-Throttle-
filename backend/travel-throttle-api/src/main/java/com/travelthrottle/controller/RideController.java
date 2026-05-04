@@ -4,7 +4,6 @@ import com.travelthrottle.dto.request.CreateRideRequest;
 import com.travelthrottle.dto.request.UpdateRideRequest;
 import com.travelthrottle.dto.response.ApiResponse;
 import com.travelthrottle.dto.response.RideResponse;
-import com.travelthrottle.dto.response.RideSummaryResponse;
 import com.travelthrottle.model.enums.RideStatus;
 import com.travelthrottle.service.RideService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,18 +40,9 @@ public class RideController {
     @PostMapping
     @Operation(summary = "Create ride")
     public ResponseEntity<ApiResponse<RideResponse>> createRide(@Valid @RequestBody CreateRideRequest request) {
-        logger.info("=== CREATE RIDE CONTROLLER ===");
-        logger.info("Source: {}", request.getSource());
-        logger.info("Destination: {}", request.getDestination());
-        logger.info("DateTime: {}", request.getDateTime());
-        logger.info("Available Seats: {}", request.getAvailableSeats());
-        logger.info("Total Seats: {}", request.getTotalSeats());
-        logger.info("Cost: {}", request.getCostPerPerson());
-        logger.info("BikeId: {}", request.getBikeId());
-
+        logger.info("Creating ride: {} -> {}", request.getSource(), request.getDestination());
         try {
             RideResponse response = rideService.createRide(request);
-            logger.info("Ride created successfully with ID: {}", response.getId());
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Ride created successfully", response));
         } catch (Exception e) {
@@ -66,7 +56,6 @@ public class RideController {
     public ResponseEntity<ApiResponse<RideResponse>> updateRide(
             @PathVariable String rideId,
             @Valid @RequestBody UpdateRideRequest request) {
-        logger.info("Updating ride: {}", rideId);
         try {
             RideResponse response = rideService.updateRide(rideId, request);
             return ResponseEntity.ok(ApiResponse.success("Ride updated successfully", response));
@@ -93,7 +82,6 @@ public class RideController {
     @PutMapping("/{rideId}/cancel")
     @Operation(summary = "Cancel ride")
     public ResponseEntity<ApiResponse<Void>> cancelRide(@PathVariable String rideId) {
-        logger.info("Cancelling ride: {}", rideId);
         try {
             rideService.cancelRide(rideId);
             return ResponseEntity.ok(ApiResponse.success("Ride cancelled successfully", null));
@@ -106,7 +94,6 @@ public class RideController {
     @GetMapping("/{rideId}")
     @Operation(summary = "Get ride by ID")
     public ResponseEntity<ApiResponse<RideResponse>> getRideById(@PathVariable String rideId) {
-        logger.info("Getting ride by ID: {}", rideId);
         try {
             RideResponse response = rideService.getRideById(rideId);
             return ResponseEntity.ok(ApiResponse.success(response));
@@ -120,12 +107,8 @@ public class RideController {
     @Operation(summary = "Get all rides")
     public ResponseEntity<ApiResponse<Page<RideResponse>>> getAllRides(
             @PageableDefault(size = 20, sort = "dateTime", direction = Sort.Direction.ASC) Pageable pageable) {
-        logger.info("=== GET ALL RIDES ===");
-        logger.info("Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
-
         try {
             Page<RideResponse> response = rideService.getAllRides(pageable);
-            logger.info("Returning {} rides (total: {})", response.getContent().size(), response.getTotalElements());
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
             logger.error("Error fetching rides: {}", e.getMessage(), e);
@@ -144,7 +127,6 @@ public class RideController {
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(required = false) Integer minSeats,
             @PageableDefault(size = 20, sort = "dateTime", direction = Sort.Direction.ASC) Pageable pageable) {
-        logger.info("Searching rides - source: {}, destination: {}", source, destination);
         try {
             Page<RideResponse> response = rideService.searchRides(
                     source, destination, startDate, endDate, minPrice, maxPrice, minSeats, pageable);
@@ -158,10 +140,8 @@ public class RideController {
     @GetMapping("/upcoming")
     @Operation(summary = "Get upcoming rides")
     public ResponseEntity<ApiResponse<List<RideResponse>>> getUpcomingRides() {
-        logger.info("Getting upcoming rides");
         try {
             List<RideResponse> response = rideService.getUpcomingRides();
-            logger.info("Found {} upcoming rides", response.size());
             return ResponseEntity.ok(ApiResponse.success(response != null ? response : new ArrayList<>()));
         } catch (Exception e) {
             logger.error("Error fetching upcoming rides: {}", e.getMessage(), e);
@@ -172,7 +152,7 @@ public class RideController {
     @GetMapping("/my-rides")
     @Operation(summary = "Get my rides")
     public ResponseEntity<ApiResponse<List<RideResponse>>> getMyRides() {
-        logger.info("=== GET MY RIDES CONTROLLER ===");
+        logger.info("GET /rides/my-rides called");
         try {
             List<RideResponse> rides = rideService.getMyRides();
             logger.info("Returning {} rides", rides.size());

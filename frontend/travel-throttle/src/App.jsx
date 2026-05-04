@@ -7,6 +7,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Layout, AuthLayout } from './components/layouts';
 import Landing from './pages/Landing';
+import OAuth2Redirect from './pages/OAuth2Redirect';
+import GroupRides from './pages/GroupRides';
+import CreateGroupRide from './pages/CreateGroupRide';
+import GroupRideDetails from './pages/GroupRideDetails';
 import { 
   Login, 
   Signup, 
@@ -60,6 +64,9 @@ function AppRoutes() {
           <Landing />
         </PublicRoute>
       } />
+      
+      {/* OAuth2 Redirect Route */}
+      <Route path="/oauth2/redirect" element={<OAuth2Redirect />} />
       
       {/* Auth Routes */}
       <Route path="/login" element={
@@ -118,6 +125,23 @@ function AppRoutes() {
         <Route path="/notifications" element={
           <ProtectedRoute>
             <Notifications />
+          </ProtectedRoute>
+        } />
+        
+        {/* NEW GROUP RIDE ROUTES */}
+        <Route path="/group-rides" element={
+          <ProtectedRoute>
+            <GroupRides />
+          </ProtectedRoute>
+        } />
+        <Route path="/create-group-ride" element={
+          <ProtectedRoute>
+            <CreateGroupRide />
+          </ProtectedRoute>
+        } />
+        <Route path="/group-rides/:id" element={
+          <ProtectedRoute>
+            <GroupRideDetails />
           </ProtectedRoute>
         } />
       </Route>

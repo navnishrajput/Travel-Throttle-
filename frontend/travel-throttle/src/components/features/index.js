@@ -2,7 +2,25 @@
  * FEATURE COMPONENTS BARREL EXPORT
  */
 
-export { default as RideCard } from './RideCard';
-export { default as RideStatus } from './RideStatus';
-export { default as ChatWindow } from './ChatWindow';
-export { default as UserAvatar } from './UserAvatar';
+import RideCard from './RideCard';
+import RideStatus from './RideStatus';
+import ChatWindow from './ChatWindow';
+import UserAvatar from './UserAvatar';
+import GroupRideCard from './GroupRideCard';
+
+export {
+    RideCard,
+    RideStatus,
+    ChatWindow,
+    UserAvatar,
+    GroupRideCard
+};
+
+// Also export as default for flexibility
+export default {
+    RideCard,
+    RideStatus,
+    ChatWindow,
+    UserAvatar,
+    GroupRideCard
+};
