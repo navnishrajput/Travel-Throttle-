@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Throttle API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 700px;
+            padding: 60px 40px;
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo {
+            font-size: 60px;
+            margin-bottom: 20px;
+            display: inline-block;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        h1 {
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #0ea5e9, #6366f1, #22c55e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 18px;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            padding: 10px 24px;
+            border-radius: 50px;
+            margin-bottom: 40px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 10px #22c55e; }
+            50% { opacity: 0.5; box-shadow: 0 0 20px #22c55e; }
+        }
+
+        .links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .link-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .link-card:hover {
+            background: rgba(14, 165, 233, 0.15);
+            border-color: rgba(14, 165, 233, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(14, 165, 233, 0.2);
+        }
+
+        .link-card .icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+        }
+
+        .link-card h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .link-card p {
+            font-size: 13px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        .endpoints {
+            text-align: left;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 30px;
+        }
+
+        .endpoints h4 {
+            color: #94a3b8;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+
+        .endpoint {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            flex-wrap: wrap;
+        }
+
+        .endpoint:last-child {
+            border-bottom: none;
+        }
+
+        .method {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            min-width: 50px;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        .method.post {
+            background: rgba(14, 165, 233, 0.2);
+            color: #38bdf8;
+        }
+
+        .method.get {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        .path {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #e2e8f0;
+            flex: 1;
+        }
+
+        .endpoint-desc {
+            color: #64748b;
+            font-size: 12px;
+            width: 100%;
+            padding-left: 62px;
+        }
+
+        footer {
+            margin-top: 40px;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        footer a {
+            color: #0ea5e9;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="logo">🏍️</div>
+    <h1>Travel Throttle API</h1>
+    <p class="subtitle">RIDE TOGETHER • SAVE TOGETHER</p>
+
+    <div class="status-badge">
+        <span class="status-dot"></span>
+        <span style="color: #4ade80; font-weight: 600;">Server is Running</span>
+    </div>
+
+    <div class="links">
+        <a href="/swagger-ui/index.html" class="link-card">
+            <div class="icon">📚</div>
+            <h3>Swagger UI</h3>
+            <p>Interactive API Documentation & Testing</p>
+        </a>
+        <a href="/v3/api-docs" class="link-card">
+            <div class="icon">📄</div>
+            <h3>OpenAPI Spec</h3>
+            <p>Raw JSON API Specification</p>
+        </a>
+        <a href="/api/public/rides/upcoming" class="link-card">
+            <div class="icon">🏍️</div>
+            <h3>Public Rides</h3>
+            <p>Browse Available Rides (No Auth)</p>
+        </a>
+        <a href="/api/db-check/connection" class="link-card">
+            <div class="icon">🔍</div>
+            <h3>Health Check</h3>
+            <p>Database Connection Status</p>
+        </a>
+    </div>
+
+    <div class="endpoints">
+        <h4>📡 Quick API Reference</h4>
+        <div class="endpoint">
+            <span class="method post">POST</span>
+            <span class="path">/api/auth/signup</span>
+        </div>
+        <div class="endpoint-desc">Register a new user account</div>
+
+        <div class="endpoint">
+            <span class="method post">POST</span>
+            <span class="path">/api/auth/login</span>
+        </div>
+        <div class="endpoint-desc">Login and get JWT authentication token</div>
+
+        <div class="endpoint">
+            <span class="method get">GET</span>
+            <span class="path">/api/public/rides/upcoming</span>
+        </div>
+        <div class="endpoint-desc">Browse upcoming rides without authentication</div>
+
+        <div class="endpoint">
+            <span class="method get">GET</span>
+            <span class="path">/api/public/rides/search</span>
+        </div>
+        <div class="endpoint-desc">Search rides by source, destination, date</div>
+
+        <div class="endpoint">
+            <span class="method get">GET</span>
+            <span class="path">/api/db-check/connection</span>
+        </div>
+        <div class="endpoint-desc">Verify PostgreSQL database connection</div>
+    </div>
+
+    <footer>
+        <p>Travel Throttle v1.0 • Bike Ride Sharing Platform</p>
+        <p style="margin-top: 10px;">
+            Explore all endpoints: <a href="/swagger-ui/index.html">API Documentation</a>
+        </p>
+        <p style="margin-top: 10px; font-size: 12px;">
+            © 2024 Travel Throttle. All rights reserved.
+        </p>
+    </footer>
+</div>
+</body>
+</html>

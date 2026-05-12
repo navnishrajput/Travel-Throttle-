@@ -88,8 +88,11 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // PUBLIC ENDPOINTS
+                        // PUBLIC ENDPOINTS - No authentication required
                         .requestMatchers(
+                                "/",                    // ← ADD THIS
+                                "/api",                 // ← ADD THIS
+                                "/index.html",          // ← ADD THIS
                                 "/auth/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
@@ -99,7 +102,6 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/ws/**",
                                 "/ws",
-                                "/public/**",
                                 "/public/**",
                                 "/db-check/**",
                                 "/oauth2/**"
