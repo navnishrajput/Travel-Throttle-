@@ -1,13 +1,13 @@
 pipeline {
     agent any
-
+    
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                echo '? Code checked out from GitHub'
+                echo '✅ Code pulled from GitHub'
             }
         }
-
+        
         stage('Build Backend') {
             steps {
                 dir('backend/travel-throttle-api') {
@@ -16,28 +16,38 @@ pipeline {
                 }
             }
         }
-
-        stage('Deploy') {
+        
+        stage('Build Docker Image') {
             steps {
-                sh 'docker stop travel-container || true'
-                sh 'docker rm travel-container || true'
-                sh 'docker run -d --name travel-container -p 8080:8080 travel-throttle-api'
+                dir('backend/travel-throttle-api') {
+                    sh 'sudo docker build -t travel-throttle-api .'
+                }
             }
         }
-
+        
+        stage('Deploy') {
+            steps {
+                sh '''
+                    sudo docker stop travel-container || true
+                    sudo docker rm travel-container || true
+                    sudo docker run -d --name travel-container -p 8080:8080 --restart unless-stopped travel-throttle-api
+                '''
+            }
+        }
+        
         stage('Verify') {
             steps {
-                sh 'sleep 20 && curl -f http://localhost:8080/'
+                sh 'sleep 30 && curl -f http://localhost:8080/'
             }
         }
     }
-
+    
     post {
         success {
-            echo '?? Pipeline completed!'
+            echo '🎉 Pipeline completed successfully!'
         }
         failure {
-            echo '? Pipeline failed!'
+            echo '❌ Pipeline failed!'
         }
     }
 }
